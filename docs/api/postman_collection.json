@@ -1,0 +1,602 @@
+{
+  "info": {
+    "_postman_id": "a548234a-18e4-4d8e-b570-3444747a8292",
+    "name": "HRIS System E2E API Testing (Gateway)",
+    "description": "Koleksi API Postman Terpadu untuk menguji seluruh sistem HRIS melalui API Gateway hris-be-orchestrator (Port 4000). Mengandung skenario login, user management, employee CRUD, reporting line matrix validation, cycle detection, dan RBAC checks.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication (Auth Service via Gateway)",
+      "item": [
+        {
+          "name": "Login User (Success)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Verify token structure and envelope\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"success\");",
+                  "    pm.expect(jsonData.data.access_token).to.be.a('string');",
+                  "    pm.expect(jsonData.data.token_type).to.eql(\"Bearer\");",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/auth/login",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User Account (Superadmin Only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 or 409 (If Email Exists)\", function () {",
+                  "    var code = pm.response.code;",
+                  "    pm.expect(code === 201 || code === 409).to.be.true;",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"citra.staff@majumundur.com\",\n  \"password\": \"securepassword123\",\n  \"role\": \"employee\",\n  \"emp_id\": 1000002\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/auth/users",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "auth",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Employee Management (Core Service via Gateway)",
+      "item": [
+        {
+          "name": "Create CEO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 or 400 (If Already Exists)\", function () {",
+                  "    var code = pm.response.code;",
+                  "    pm.expect(code === 201 || code === 400).to.be.true;",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emp_id\": 1000000,\n  \"name\": \"Budi CEO\",\n  \"job_title\": \"CEO Utama\",\n  \"department\": \"Executive Office\",\n  \"division\": \"HQ\",\n  \"company\": \"PT Maju Mundur\",\n  \"assignment_type\": \"Shared Services\",\n  \"is_ceo\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/employees",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Manager (Shared Services)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 or 400 (If Already Exists)\", function () {",
+                  "    var code = pm.response.code;",
+                  "    pm.expect(code === 201 || code === 400).to.be.true;",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emp_id\": 1000001,\n  \"name\": \"Siti Manager\",\n  \"job_title\": \"HR Manager\",\n  \"department\": \"HR\",\n  \"division\": \"Corporate Services\",\n  \"company\": \"PT Maju Mundur\",\n  \"assignment_type\": \"Shared Services\",\n  \"is_ceo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/employees",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Employee (Unit Business)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201 or 400 (If Already Exists)\", function () {",
+                  "    var code = pm.response.code;",
+                  "    pm.expect(code === 201 || code === 400).to.be.true;",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emp_id\": 1000002,\n  \"name\": \"Citra Staff\",\n  \"job_title\": \"Senior Accountant\",\n  \"department\": \"Finance\",\n  \"division\": \"Corporate Services\",\n  \"company\": \"PT Maju Mundur\",\n  \"assignment_type\": \"Unit Business\",\n  \"is_ceo\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/employees",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Reporting Line Configuration",
+      "item": [
+        {
+          "name": "Set Manager for Employee 1 (Shared Services -> CEO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reporting_lines\": [\n    {\n      \"manager_emp_id\": 1000000,\n      \"manager_type\": \"core_line_manager\",\n      \"is_primary\": true\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/employees/1000001/reporting-lines",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees",
+                "1000001",
+                "reporting-lines"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set Managers for Employee 2 (Unit Business -> CEO & Siti)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reporting_lines\": [\n    {\n      \"manager_emp_id\": 1000001,\n      \"manager_type\": \"core_line_manager\",\n      \"is_primary\": true\n    },\n    {\n      \"manager_emp_id\": 1000000,\n      \"manager_type\": \"ub_manager\",\n      \"is_primary\": false\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/employees/1000002/reporting-lines",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees",
+                "1000002",
+                "reporting-lines"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Uji Circular Reporting (Error 409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "pm.test(\"Verify CIRCULAR_REPORTING error code\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql(\"error\");",
+                  "    pm.expect(jsonData.error.code).to.eql(\"CIRCULAR_REPORTING\");",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{superadminToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reporting_lines\": [\n    {\n      \"manager_emp_id\": 1000002,\n      \"manager_type\": \"core_line_manager\",\n      \"is_primary\": true\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{gatewayUrl}}/employees/1000001/reporting-lines",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees",
+                "1000001",
+                "reporting-lines"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Otorisasi & RBAC (Core via Gateway)",
+      "item": [
+        {
+          "name": "Get Profile Owner (Employee 2 - Allowed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Verify profile emp_id matches\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.emp_id).to.eql(\"1000002\");",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee1Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/employees/1000002",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees",
+                "1000002"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Other Profile (Employee 3 views Employee 2 - Error 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "pm.test(\"Verify FORBIDDEN code\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.error.code).to.eql(\"FORBIDDEN\");",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee2Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/employees/1000002",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "employees",
+                "1000002"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Org Chart as Employee (Allowed)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee1Token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gatewayUrl}}/org-chart",
+              "host": [
+                "{{gatewayUrl}}"
+              ],
+              "path": [
+                "org-chart"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "gatewayUrl",
+      "value": "http://localhost:4000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "testEmail",
+      "value": "admin@majumundur.com",
+      "type": "string"
+    },
+    {
+      "key": "testPassword",
+      "value": "supersecurepassword",
+      "type": "string"
+    },
+    {
+      "key": "superadminToken",
+      "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwMDAwIiwicm9sZSI6InN1cGVyYWRtaW4iLCJpYXQiOjE3ODUyNTcyMjQsImV4cCI6MTc4NTg2MjAyNH0.hLyIMoq_uKRXNghrZ4uP9uW98ENH8o_sf1KiZgRBub8RtzpgCqx-EAStd8NKYk6gzPHhVsSR-PjoPV6JsOqSBsljRsxazIHKMe6cqDdx9AW_JwN30oA9B1_CgTjHoTn2CMtDrVmV_a2ygtZ_E0i_ia6nOKME63XKEWMO-nx7xUkkhlKqYpFFlWIvuN7r_29TEZoVI4sRoxLFr7Ug8Q4ujv9HvuilVDuOAS0NBIQM1Y6-qc3hrRMxH3ton97KDiu7_3-FNgvrP5Fmyy2FohI58MZWiKawk9AcPSPo0k6yGuHZeGspIxPR1PPS61COABvQdOpY6ZhTSSFOK36fGkWyDw",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwMDAxIiwicm9sZSI6ImFkbWluIiwiZW1wX2lkIjoxMDAwMDAxLCJpYXQiOjE3ODUyNTcyMjQsImV4cCI6MTc4NTg2MjAyNH0.JKIGA4CBdtEp3qc_kcEdvJVeW42nB_tbGNlrxFSdt7_sl_MsrfU8iABd1AFRXifcFvfW1kdUag4pM_md5xT-eTfP0ZgqAQ8G2DPSSX0zr8TORNLcFQUQ6pd2Nmn3j9EumGhtpB0K8dZn3hZ-I4TdZLv7cHWtdrmhqK6NBQyCoB1E6yObgpWkV-78tLwgGcXa_vVc_vEZooZXxQ05SHnyOOn7_YsVumxCy4IUXeRF4D4y5EQ4X6qqpClwQ-PQJdoVlrgN9gPbK2DPlPo02L-6UDPZG0wWAM8xRASPm6qVUPc7WwJHznj7X5L9zyc4jZd5r6qkynKAsvdAUJ18j3DAZg",
+      "type": "string"
+    },
+    {
+      "key": "employee1Token",
+      "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwMDAyIiwicm9sZSI6ImVtcGxveWVlIiwiZW1wX2lkIjoxMDAwMDAyLCJpYXQiOjE3ODUyNTcyMjQsImV4cCI6MTc4NTg2MjAyNH0.bccCQ0wlWFDmDztBvf2q8CWGerDPPAyVpniCSsazWvzByeNn_IOG0o2mNlHeijuB1y5n3pbXfy5rJ0EaNAm2hI-zsA1F7Fwj5FQA6iFB9f13pBe52j8RMK5rDs9qvc_PtXSXB0hJ0HjAeF9VuY3v-L60DhcGl-JbVoFeJND1l_mvT0h4-95F5i8u5mfFGsyovKn9hhiC4ktmmkKQ7B0NVN8H4v8XMpQJrbp13aCkbwzKtXwvwZsKxetYwS9GIjdnoJh1PbbhJD_s295PJoX8XBXacMITGed-UE0Ha5eGLTabzE7WmqnbmHRDXvsSoKoX04-XAfw0kBAAvlTVkSTQEA",
+      "type": "string"
+    },
+    {
+      "key": "employee2Token",
+      "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDAwMDAzIiwicm9sZSI6ImVtcGxveWVlIiwiZW1wX2lkIjoxMDAwMDAzLCJpYXQiOjE3ODUyNTcyMjQsImV4cCI6MTc4NTg2MjAyNH0.ZNuPrvSC4bZTeBxJrBRtooO68zAZPfcTT4Vh9oJVzfHPpxDWrgUcbDj-Ru559hjQpJp_mQnJXmMMprxOvp6AXgL2N8I-m59aENjU3itmLoKWnEpz41sA7uqToCfYD6rDK5syTbHyIrM3h15uKbkNKZozRgFVNun_DL9ixuA8US4DtKIO5h2kvjxQm-Hf5qiWkzjfBTm7usRjrJ0aanpjptqGDhoIypvwCzNXvCg9XMA-G2hb7WyDw3p2FylgMq6R0ohe41HsZxtwOnN_H_vG1JidsW9I7pDJPhr3LKmNHvLf4XI2yU9B1W62QTZa8DRWjaAwUvmkmq2DqCoprWqCwA",
+      "type": "string"
+    }
+  ]
+}

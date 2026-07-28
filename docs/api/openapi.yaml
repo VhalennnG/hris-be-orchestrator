@@ -1,0 +1,324 @@
+openapi: 3.0.3
+info:
+  title: HRIS System API (Gateway Orchestrator)
+  description: Dokumentasi API terpadu untuk HRIS Employee Management System. Semua request dialirkan melalui API Gateway hris-be-orchestrator.
+  version: 1.1.0
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Gateway Orchestrator Server
+paths:
+  /auth/login:
+    post:
+      summary: Login pengguna dan menerbitkan JWT RS256
+      description: Endpoint publik. Memverifikasi kredensial dan mengembalikan access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: admin@majumundur.com
+                password:
+                  type: string
+                  example: supersecurepassword
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginSuccessResponse'
+        '401':
+          description: Salah email/password
+        '403':
+          description: Akun tidak aktif
+
+  /auth/users:
+    post:
+      summary: Mendaftarkan akun user baru (Superadmin Only)
+      description: Memerlukan Bearer token superadmin. Memvalidasi emp_id ke core service secara internal.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - role
+              properties:
+                email:
+                  type: string
+                  example: employee@majumundur.com
+                password:
+                  type: string
+                  example: initialpass123
+                role:
+                  type: string
+                  enum: [superadmin, admin, employee]
+                  example: employee
+                emp_id:
+                  type: integer
+                  example: 1000002
+      responses:
+        '201':
+          description: User berhasil terdaftar
+        '400':
+          description: Validasi gagal / emp_id tidak terdaftar di core
+        '403':
+          description: Akses ditolak (Bukan superadmin)
+        '409':
+          description: Email sudah terdaftar
+
+  /auth/users/{user_id}/role:
+    patch:
+      summary: Memperbarui role user (Superadmin Only)
+      description: Memerlukan Bearer token superadmin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role
+              properties:
+                role:
+                  type: string
+                  enum: [superadmin, admin, employee]
+      responses:
+        '200':
+          description: Role berhasil diubah
+
+  /auth/users/{user_id}/reset-password:
+    post:
+      summary: Reset password user (Superadmin Only)
+      description: Memerlukan Bearer token superadmin.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Password berhasil di-reset
+
+  /employees:
+    post:
+      summary: Membuat data karyawan baru (Admin/Superadmin Only)
+      description: Memerlukan Bearer token admin/superadmin.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - job_title
+                - department
+                - division
+                - company
+                - assignment_type
+              properties:
+                emp_id:
+                  type: integer
+                  description: Optional manual ID override
+                  example: 1000005
+                name:
+                  type: string
+                job_title:
+                  type: string
+                department:
+                  type: string
+                division:
+                  type: string
+                company:
+                  type: string
+                group:
+                  type: string
+                assignment_type:
+                  type: string
+                  enum: [Shared Services, Unit Business]
+      responses:
+        '201':
+          description: Karyawan berhasil dibuat
+
+  /employees/{emp_id}:
+    get:
+      summary: Melihat data profil lengkap karyawan & reporting lines
+      description: Karyawan biasa hanya boleh melihat profil dirinya sendiri (resource ownership). Admin/Superadmin bebas melihat siapa saja.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: emp_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Data detail profil
+        '403':
+          description: Akses ditolak (Mencoba melihat profil orang lain sebagai karyawan biasa)
+        '404':
+          description: Karyawan tidak ditemukan
+
+    put:
+      summary: Memperbarui biodata karyawan (Admin/Superadmin Only)
+      description: Memerlukan Bearer token admin/superadmin. Tidak memperbarui reporting lines.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: emp_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Karyawan berhasil diupdate
+
+    delete:
+      summary: Menghapus data karyawan - Soft Delete (Admin/Superadmin Only)
+      description: Mengubah status is_active menjadi false.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: emp_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Karyawan dinonaktifkan
+
+  /employees/{emp_id}/reporting-lines:
+    put:
+      summary: Memperbarui hubungan manager karyawan (Admin/Superadmin Only)
+      description: Memvalidasi self-reference, limit manager SS (1) / UB (2), keaktifan manager, dan cycle detection.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: emp_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reporting_lines
+              properties:
+                reporting_lines:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - manager_emp_id
+                      - manager_type
+                      - is_primary
+                    properties:
+                      manager_emp_id:
+                        type: integer
+                      manager_type:
+                        type: string
+                        enum: [core_line_manager, ub_manager]
+                      is_primary:
+                        type: boolean
+      responses:
+        '200':
+          description: Hubungan manager berhasil disimpan
+        '400':
+          description: Kesalahan konfigurasi (mis. SS diisi 2 manager)
+        '409':
+          description: Sirkular terdeteksi (CIRCULAR_REPORTING)
+
+  /org-chart:
+    get:
+      summary: Mengambil visualisasi graf organisasi
+      description: Terbuka untuk semua role. Mengembalikan pohon primary manager dan edges sekunder.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Hasil struktur org-chart
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginSuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            token_type:
+              type: string
+              example: Bearer
+            expires_in:
+              type: integer
+              example: 14400
+            user:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                emp_id:
+                  type: string
+                  nullable: true
+                role:
+                  type: string
