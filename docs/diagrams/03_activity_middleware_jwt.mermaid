@@ -1,0 +1,37 @@
+flowchart TD
+    Start(["Request masuk dari FE"]) --> CheckPublic{"Path publik?\n(POST /auth/login)"}
+
+    CheckPublic -->|Ya| ForwardNoAuth["Forward langsung ke hris-be-auth\n(tanpa cek token)"]
+    ForwardNoAuth --> End1(["Response ke FE"])
+
+    CheckPublic -->|Tidak| CheckHeader{"Header\nAuthorization: Bearer <token>\nada?"}
+
+    CheckHeader -->|Tidak ada| Reject401a["401 UNAUTHORIZED\nerror.code: MISSING_TOKEN"]
+    Reject401a --> End2(["Response ke FE\n(request TIDAK diteruskan)"])
+
+    CheckHeader -->|Ada| VerifySig["Verifikasi signature JWT\n(public key RS256, lokal,\nTANPA network call ke auth)"]
+
+    VerifySig --> CheckSig{"Signature valid?"}
+    CheckSig -->|Tidak| Reject401b["401 UNAUTHORIZED\nerror.code: INVALID_TOKEN"]
+    Reject401b --> End3(["Response ke FE"])
+
+    CheckSig -->|Ya| CheckExp{"exp claim\nmasih berlaku?"}
+    CheckExp -->|Expired| Reject401c["401 UNAUTHORIZED\nerror.code: TOKEN_EXPIRED"]
+    Reject401c --> End4(["Response ke FE"])
+
+    CheckExp -->|Berlaku| ExtractClaim["Ekstrak claim:\nuser_id, emp_id, role"]
+
+    ExtractClaim --> InjectHeader["Sisipkan trusted header:\nX-User-Id, X-User-Role, X-Emp-Id"]
+
+    InjectHeader --> Route{"Tentukan tujuan\nberdasarkan path"}
+    Route -->|"/employees/*\n/org-chart"| ForwardCore["Forward ke hris-be-core"]
+    Route -->|"/auth/users/*\n/auth/*"| ForwardAuth["Forward ke hris-be-auth"]
+
+    ForwardCore --> CheckTimeout{"Response diterima\ndalam timeout?"}
+    ForwardAuth --> CheckTimeout
+
+    CheckTimeout -->|Timeout/Error| Reject503["503 SERVICE_UNAVAILABLE"]
+    Reject503 --> End5(["Response ke FE"])
+
+    CheckTimeout -->|OK| Passthrough["Passthrough response\napa adanya ke FE"]
+    Passthrough --> End6(["Response ke FE"])

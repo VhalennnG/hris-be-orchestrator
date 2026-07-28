@@ -1,0 +1,32 @@
+flowchart LR
+    subgraph FE_SIDE["Entitas Eksternal"]
+        FE["hris-fe"]
+    end
+
+    subgraph ORCHESTRATOR["Proses: hris-be-orchestrator"]
+        direction TB
+        P1(["P1: Terima Request\n+ Body/Payload asli"])
+        P2(["P2: Verifikasi JWT\n(baca token dari header\nAuthorization)"])
+        P3(["P3: Ekstrak Claim\n(user_id, emp_id, role)"])
+        P4(["P4: Injeksi Header Baru\nX-User-Id\nX-User-Role\nX-Emp-Id"])
+        P5(["P5: Forward Payload asli\n+ header tambahan"])
+
+        P1 --> P2 --> P3 --> P4 --> P5
+    end
+
+    subgraph STORE["Data Store (Config, bukan DB)"]
+        KEY[("AUTH_PUBLIC_KEY\n(env var)")]
+    end
+
+    subgraph DEST["Entitas Tujuan"]
+        CORE["hris-be-core"]
+        AUTH["hris-be-auth"]
+    end
+
+    FE -->|"1. Payload asli:\nbody JSON + Authorization: Bearer token"| P1
+    KEY -->|"2. Public key dibaca\nsaat verifikasi"| P2
+    P5 -->|"3a. Payload asli TIDAK diubah\n+ header X-User-Id/X-User-Role/X-Emp-Id\nditambahkan"| CORE
+    P5 -->|"3b. Untuk endpoint /auth/*\n(payload asli, token tidak diteruskan\nkarena auth tidak perlu re-verify)"| AUTH
+
+    CORE -->|"4. Response"| P5
+    P5 -->|"5. Response passthrough\n(tidak diubah)"| FE
