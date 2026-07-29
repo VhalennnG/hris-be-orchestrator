@@ -23,20 +23,20 @@ paths:
               properties:
                 email:
                   type: string
-                  example: admin@majumundur.com
+                  example: superuser@majumundur.com
                 password:
                   type: string
-                  example: supersecurepassword
+                  example: password
       responses:
-        '200':
+        "200":
           description: Login berhasil
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LoginSuccessResponse'
-        '401':
+                $ref: "#/components/schemas/LoginSuccessResponse"
+        "401":
           description: Salah email/password
-        '403':
+        "403":
           description: Akun tidak aktif
 
   /auth/users:
@@ -70,13 +70,13 @@ paths:
                   type: integer
                   example: 1000002
       responses:
-        '201':
+        "201":
           description: User berhasil terdaftar
-        '400':
+        "400":
           description: Validasi gagal / emp_id tidak terdaftar di core
-        '403':
+        "403":
           description: Akses ditolak (Bukan superadmin)
-        '409':
+        "409":
           description: Email sudah terdaftar
 
   /auth/users/{user_id}/role:
@@ -104,7 +104,7 @@ paths:
                   type: string
                   enum: [superadmin, admin, employee]
       responses:
-        '200':
+        "200":
           description: Role berhasil diubah
 
   /auth/users/{user_id}/reset-password:
@@ -131,7 +131,7 @@ paths:
                 password:
                   type: string
       responses:
-        '200':
+        "200":
           description: Password berhasil di-reset
 
   /employees:
@@ -174,7 +174,7 @@ paths:
                   type: string
                   enum: [Shared Services, Unit Business]
       responses:
-        '201':
+        "201":
           description: Karyawan berhasil dibuat
 
   /employees/{emp_id}:
@@ -190,11 +190,11 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Data detail profil
-        '403':
+        "403":
           description: Akses ditolak (Mencoba melihat profil orang lain sebagai karyawan biasa)
-        '404':
+        "404":
           description: Karyawan tidak ditemukan
 
     put:
@@ -215,7 +215,7 @@ paths:
             schema:
               type: object
       responses:
-        '200':
+        "200":
           description: Karyawan berhasil diupdate
 
     delete:
@@ -230,7 +230,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Karyawan dinonaktifkan
 
   /employees/{emp_id}/reporting-lines:
@@ -271,11 +271,11 @@ paths:
                       is_primary:
                         type: boolean
       responses:
-        '200':
+        "200":
           description: Hubungan manager berhasil disimpan
-        '400':
+        "400":
           description: Kesalahan konfigurasi (mis. SS diisi 2 manager)
-        '409':
+        "409":
           description: Sirkular terdeteksi (CIRCULAR_REPORTING)
 
   /org-chart:
@@ -285,7 +285,7 @@ paths:
       security:
         - BearerAuth: []
       responses:
-        '200':
+        "200":
           description: Hasil struktur org-chart
 
 components:
