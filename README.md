@@ -100,6 +100,20 @@ Diagram pendukung gateway berikut dapat ditemukan di folder [docs/diagrams](docs
 | **Activity Middleware JWT** | Diagram alur verifikasi tanda tangan dan masa kedaluwarsa token JWT secara lokal. | [03_activity_middleware_jwt.mermaid](docs/diagrams/03_activity_middleware_jwt.mermaid) |
 | **DFD Header Injection** | Diagram aliran data dari ekstraksi klaim JWT hingga injeksi trusted header. | [04_dfd_payload_header_injection.mermaid](docs/diagrams/04_dfd_payload_header_injection.mermaid) |
 
+## Prasyarat Kunci Kriptografi (Security Keys Setup)
+
+Service ini memerlukan public key dari Auth Service untuk memverifikasi tanda tangan JWT secara lokal. Karena berkas kunci tidak disimpan di GitHub demi keamanan, lakukan langkah berikut setelah meng-cloning repositori ini:
+
+1. Buat folder `keys` di root folder service ini (jika belum ada):
+   ```bash
+   mkdir -p keys
+   ```
+2. Salin berkas `public_key.pem` yang telah dibuat di folder Auth Service (`auth/keys/`) ke dalam folder `orchestrator/keys/`.
+   ```bash
+   # Contoh perintah jika folder auth dan orchestrator sejajar:
+   cp ../auth/keys/public_key.pem ./keys/public_key.pem
+   ```
+
 ---
 
 ## Environment Variables
