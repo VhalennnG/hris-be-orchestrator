@@ -36,20 +36,39 @@ const decorateProxyReq = (proxyReq, req, res) => {
   }
 };
 
-// 1. Auth Proxy configuration
+// 1. Auth Proxy configuration (adds prefix back)
 export const authProxy = createProxyMiddleware({
   target: AUTH_SERVICE_URL,
   changeOrigin: true,
+  pathRewrite: {
+    '^/': '/api/v1/auth/'
+  },
   on: {
     proxyReq: decorateProxyReq,
     error: handleProxyError
   }
 });
 
-// 2. Core Proxy configuration
-export const coreProxy = createProxyMiddleware({
+// 2. Core Employees Proxy configuration (adds prefix back)
+export const coreEmployeesProxy = createProxyMiddleware({
   target: CORE_SERVICE_URL,
   changeOrigin: true,
+  pathRewrite: {
+    '^/': '/api/v1/employees/'
+  },
+  on: {
+    proxyReq: decorateProxyReq,
+    error: handleProxyError
+  }
+});
+
+// 3. Core Org Chart Proxy configuration (adds prefix back)
+export const coreOrgChartProxy = createProxyMiddleware({
+  target: CORE_SERVICE_URL,
+  changeOrigin: true,
+  pathRewrite: {
+    '^/': '/api/v1/org-chart/'
+  },
   on: {
     proxyReq: decorateProxyReq,
     error: handleProxyError
