@@ -21,11 +21,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// 1. PUBLIC login endpoint (No prefix is stripped on direct routing via app.post)
-app.post('/api/v1/auth/login', authProxy);
+// 1. PUBLIC login endpoint & PROTECTED auth routes combined
+app.use('/api/v1/auth', (req, res, next) => {
+  if (req.path === '/login') {
+    return next();
+  }
+  return jwtGatewayVerify(req, res, next);
+}, authProxy);
 
-// 2. PROTECTED routes (requires JWT verification at gateway)
-app.use('/api/v1/auth', jwtGatewayVerify, authProxy);
+// 2. PROTECTED core routes (requires JWT verification at gateway)
 app.use('/api/v1/employees', jwtGatewayVerify, coreEmployeesProxy);
 app.use('/api/v1/org-chart', jwtGatewayVerify, coreOrgChartProxy);
 
